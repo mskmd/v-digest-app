@@ -7,6 +7,9 @@
 <title>Viral Digest</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --accent: #eb4034;
@@ -16,7 +19,8 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    margin: 0; height: 100%;
+    font-family: "IBM Plex Sans Arabic", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: var(--bg-dark); color: #eee;
   }
 
@@ -28,29 +32,42 @@
   header .side { width: 40px; display: flex; align-items: center; }
   header .side.left { justify-content: flex-start; }
   header .side.right { justify-content: flex-end; }
-  header .title { font-size: 18px; font-weight: 700; cursor: pointer; text-align: center; flex: 1; }
+  header .title { font-size: 22px; font-weight: 700; cursor: pointer; text-align: center; flex: 1; letter-spacing: 0.01em; }
   header button.icon-btn {
     background: none; border: none; color: white; font-size: 20px; padding: 6px;
     cursor: pointer; line-height: 1;
   }
 
-  #view-landing { padding: 24px 18px; }
-  .big-btn {
-    display: block; width: 100%; padding: 22px; margin-bottom: 16px; border: none;
-    border-radius: 14px; font-size: 19px; font-weight: 800; color: #111;
-    cursor: pointer; text-align: center;
+  #view-landing { padding: 32px 24px 24px; text-align: center; }
+  .landing-date { font-size: 15px; color: #9a9a9a; margin-bottom: 28px; }
+  .tile-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+    max-width: 420px; margin: 0 auto;
   }
-  .big-btn.run { background: var(--yellow); }
-  .big-btn.latest { background: var(--cyan); }
-  .big-btn:disabled { opacity: 0.6; }
-  .spinner {
-    width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.3);
-    border-top-color: #111; border-radius: 50%; animation: spin 0.8s linear infinite;
-    display: inline-block; vertical-align: middle; margin-right: 8px;
+  .tile {
+    background: none; border: none; padding: 0; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    font-family: inherit; color: #eee;
+  }
+  .tile-icon {
+    width: 100%; aspect-ratio: 1; border-radius: 20px;
+    background: #f1f1f1; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    transition: transform 0.12s ease;
+  }
+  .tile:active .tile-icon { transform: scale(0.94); }
+  .tile-icon img { width: 42%; height: 42%; object-fit: contain; }
+  .tile-label { font-size: 16px; font-weight: 600; }
+  .tile:disabled { opacity: 0.5; pointer-events: none; }
+  .tile .spinner {
+    width: 28%; height: 28%; border: 3px solid rgba(0,0,0,0.15);
+    border-top-color: #eb4034; border-radius: 50%; animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  #landing-status { padding: 10px 4px; font-size: 13px; color: #aaa; text-align: center; min-height: 18px; }
+  #landing-status { padding: 22px 4px 4px; font-size: 13px; color: #aaa; text-align: center; min-height: 18px; }
   #landing-status.error { color: #ff8a80; font-weight: 600; }
+  .landing-footer-date { margin-top: 48px; font-size: 13px; color: #6f6f6f; text-align: center; }
 
   #settings-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 30;
@@ -112,15 +129,33 @@
 <header>
   <div class="side left" id="header-left"></div>
   <div class="title" id="header-title" onclick="goHome()">Viral Digest</div>
-  <div class="side right">
-    <button class="icon-btn" onclick="toggleSettings(true)" aria-label="Settings">⚙</button>
-  </div>
+  <div class="side right"></div>
 </header>
 
 <div id="view-landing">
-  <button class="big-btn run" id="run-btn" onclick="triggerRun()">▶ Run Digest</button>
-  <button class="big-btn latest" id="latest-btn" onclick="loadLatest()">↻ Latest Digest</button>
+  <div class="landing-date" id="landing-date-top"></div>
+
+  <div class="tile-grid">
+    <button class="tile" id="run-btn" onclick="triggerRun()">
+      <div class="tile-icon"><img src="Run-1000.png" alt=""></div>
+      <div class="tile-label" id="run-label">Run</div>
+    </button>
+    <button class="tile" id="latest-btn" onclick="loadLatest()">
+      <div class="tile-icon"><img src="Latest-1000.png" alt=""></div>
+      <div class="tile-label" id="latest-label">Latest</div>
+    </button>
+    <button class="tile" id="settings-btn" onclick="toggleSettings(true)">
+      <div class="tile-icon"><img src="Settings-1000.png" alt=""></div>
+      <div class="tile-label">Settings</div>
+    </button>
+    <button class="tile" id="csv-btn" onclick="downloadCsv()">
+      <div class="tile-icon"><img src="CSV-1000.png" alt=""></div>
+      <div class="tile-label" id="csv-label">CSV</div>
+    </button>
+  </div>
+
   <div id="landing-status"></div>
+  <div class="landing-footer-date" id="landing-date-bottom"></div>
 </div>
 
 <div id="view-digest">
@@ -219,11 +254,29 @@ async function latestRunId() {
   } catch (e) { return null; }
 }
 
+// v15: tiles carry an icon image + a separate label element now (the old
+// buttons were plain text and could be safely overwritten wholesale while
+// "running"; overwriting innerHTML here would blank out the icon). Swap the
+// icon for a spinner and update only the label text instead.
+function setTileBusy(tileId, labelId, busyText) {
+  const tile = document.getElementById(tileId);
+  const iconBox = tile.querySelector('.tile-icon');
+  tile.disabled = true;
+  iconBox.dataset.origHtml = iconBox.dataset.origHtml || iconBox.innerHTML;
+  iconBox.innerHTML = '<span class="spinner"></span>';
+  document.getElementById(labelId).textContent = busyText;
+}
+function setTileIdle(tileId, labelId, idleText) {
+  const tile = document.getElementById(tileId);
+  const iconBox = tile.querySelector('.tile-icon');
+  tile.disabled = false;
+  if (iconBox.dataset.origHtml) iconBox.innerHTML = iconBox.dataset.origHtml;
+  document.getElementById(labelId).textContent = idleText;
+}
+
 async function triggerRun() {
   if (!isConfigured()) { toggleSettings(true); return; }
-  const btn = document.getElementById('run-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Starting…';
+  setTileBusy('run-btn', 'run-label', 'Starting…');
   const c = getConfig();
   try {
     // Record the newest existing run BEFORE dispatching. GitHub takes a few
@@ -241,21 +294,20 @@ async function triggerRun() {
       throw new Error(`GitHub rejected the trigger (HTTP ${dispatchResp.status}). Check token permissions.`);
     }
     setStatus('Run started — typically takes 15–25 minutes.');
-    await pollRun(btn, priorRunId);
+    await pollRun(priorRunId);
   } catch (e) {
     setStatus(e.message, true);
-    btn.disabled = false;
-    btn.innerHTML = '▶ Run Digest';
+    setTileIdle('run-btn', 'run-label', 'Run');
   }
 }
 
-async function pollRun(btn, priorRunId) {
+async function pollRun(priorRunId) {
   const c = getConfig();
   const startedAt = Date.now();
   const maxWaitMs = 50 * 60 * 1000;   // workflow timeout is 45 min
   let sawOurRun = false;
 
-  const reset = () => { btn.disabled = false; btn.innerHTML = '▶ Run Digest'; };
+  const reset = () => setTileIdle('run-btn', 'run-label', 'Run');
 
   while (Date.now() - startedAt < maxWaitMs) {
     await new Promise(r => setTimeout(r, sawOurRun ? 20000 : 5000));
@@ -270,7 +322,7 @@ async function pollRun(btn, priorRunId) {
 
       // Ignore anything that isn't the run we just started.
       if (priorRunId !== null && run.id === priorRunId) {
-        btn.innerHTML = '<span class="spinner"></span>Queuing…';
+        document.getElementById('run-label').textContent = 'Queuing…';
         continue;
       }
       sawOurRun = true;
@@ -286,7 +338,7 @@ async function pollRun(btn, priorRunId) {
         return;
       }
       const elapsedMin = Math.round((Date.now() - startedAt) / 60000);
-      btn.innerHTML = `<span class="spinner"></span>Running… (${elapsedMin} min)`;
+      document.getElementById('run-label').textContent = `${elapsedMin}m…`;
     } catch (e) {
       // Transient network/API blip — keep polling rather than aborting the run.
     }
@@ -295,25 +347,60 @@ async function pollRun(btn, priorRunId) {
   reset();
 }
 
+// Shared by "Latest" (renders cards) and "CSV" (downloads the raw file) —
+// both just need the current latest_digest.csv content from the repo.
+async function fetchLatestCsv() {
+  const c = getConfig();
+  // cache-bust: the Contents API can serve a stale copy for a few seconds
+  // right after the workflow pushes, which would show the previous digest.
+  const resp = await fetch(
+    `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${CSV_PATH}?t=${Date.now()}`,
+    { headers: { ...ghHeaders(), 'Accept': 'application/vnd.github.raw+json' }, cache: 'no-store' }
+  );
+  if (resp.status === 404) throw new Error('No digest found yet — run it at least once.');
+  if (!resp.ok) throw new Error(`Could not load digest (HTTP ${resp.status}).`);
+  return resp.text();
+}
+
 async function loadLatest() {
   if (!isConfigured()) { toggleSettings(true); return; }
+  setTileBusy('latest-btn', 'latest-label', 'Loading…');
   setStatus('Loading latest digest…');
-  const c = getConfig();
   try {
-    // cache-bust: the Contents API can serve a stale copy for a few seconds
-    // right after the workflow pushes, which would show the previous digest.
-    const resp = await fetch(
-      `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${CSV_PATH}?t=${Date.now()}`,
-      { headers: { ...ghHeaders(), 'Accept': 'application/vnd.github.raw+json' }, cache: 'no-store' }
-    );
-    if (resp.status === 404) { setStatus('No digest found yet — run it at least once.', true); return; }
-    if (!resp.ok) throw new Error(`Could not load digest (HTTP ${resp.status}).`);
-    const csvText = await resp.text();
+    const csvText = await fetchLatestCsv();
     renderDigest(csvText);
     setStatus('');
     goToDigest();
   } catch (e) {
     setStatus(e.message, true);
+  } finally {
+    setTileIdle('latest-btn', 'latest-label', 'Latest');
+  }
+}
+
+async function downloadCsv() {
+  if (!isConfigured()) { toggleSettings(true); return; }
+  setTileBusy('csv-btn', 'csv-label', 'Downloading…');
+  setStatus('Downloading CSV…');
+  try {
+    const csvText = await fetchLatestCsv();
+    // Prepend a BOM so Arabic text opens correctly in Excel/Sheets, matching
+    // how the engine itself writes the file (utf-8-sig).
+    const blob = new Blob(['\uFEFF' + csvText], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+    a.href = url;
+    a.download = `viral_digest_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setStatus('CSV downloaded.');
+  } catch (e) {
+    setStatus(e.message, true);
+  } finally {
+    setTileIdle('csv-btn', 'csv-label', 'CSV');
   }
 }
 
@@ -467,6 +554,16 @@ async function fetchThumb(imgEl) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
+
+// Today's date, shown once under the header and once in the footer, matching
+// the "Tuesday, 01 September, 2026" style from the design.
+(function fillDates() {
+  const today = new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  });
+  document.getElementById('landing-date-top').textContent = today;
+  document.getElementById('landing-date-bottom').textContent = today;
+})();
 </script>
 </body>
 </html>

@@ -4,8 +4,8 @@
   "description": "Trigger and view the viral news digest",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f4f4f5",
-  "theme_color": "#c0392b",
+  "background_color": "#272929",
+  "theme_color": "#eb4034",
   "orientation": "portrait",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
