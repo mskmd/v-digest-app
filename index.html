@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eb4034">
+<title>Viral Digest</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root {
+    --accent: #eb4034;
+    --bg-dark: #272929;
+    --yellow: #f5dd07;
+    --cyan: #07f5e5;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg-dark); color: #eee;
+  }
+
+  header {
+    background: var(--accent); color: white; padding: 14px 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 20;
+  }
+  header .side { width: 40px; display: flex; align-items: center; }
+  header .side.left { justify-content: flex-start; }
+  header .side.right { justify-content: flex-end; }
+  header .title { font-size: 18px; font-weight: 700; cursor: pointer; text-align: center; flex: 1; }
+  header button.icon-btn {
+    background: none; border: none; color: white; font-size: 20px; padding: 6px;
+    cursor: pointer; line-height: 1;
+  }
+
+  #view-landing { padding: 24px 18px; }
+  .big-btn {
+    display: block; width: 100%; padding: 22px; margin-bottom: 16px; border: none;
+    border-radius: 14px; font-size: 19px; font-weight: 800; color: #111;
+    cursor: pointer; text-align: center;
+  }
+  .big-btn.run { background: var(--yellow); }
+  .big-btn.latest { background: var(--cyan); }
+  .big-btn:disabled { opacity: 0.6; }
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #111; border-radius: 50%; animation: spin 0.8s linear infinite;
+    display: inline-block; vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #landing-status { padding: 10px 4px; font-size: 13px; color: #aaa; text-align: center; min-height: 18px; }
+  #landing-status.error { color: #ff8a80; font-weight: 600; }
+
+  #settings-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 30;
+    display: none; align-items: flex-end; justify-content: center;
+  }
+  #settings-overlay.open { display: flex; }
+  .settings-sheet {
+    background: #1c1d1d; width: 100%; max-width: 480px; border-radius: 18px 18px 0 0;
+    padding: 20px 18px 28px; color: #eee;
+  }
+  .settings-sheet h2 { margin: 0 0 14px; font-size: 17px; color: white; }
+  .settings-sheet label { font-size: 12px; color: #999; display: block; margin-bottom: 4px; }
+  .settings-sheet input {
+    width: 100%; padding: 12px; border: 1px solid #444; border-radius: 8px;
+    font-size: 14px; margin-bottom: 12px; background: #2f3030; color: #eee;
+  }
+  .settings-sheet .hint { font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 14px; }
+  .settings-sheet .hint a { color: var(--cyan); }
+  .settings-sheet button.save {
+    width: 100%; padding: 13px; border: none; border-radius: 10px;
+    background: var(--accent); color: white; font-size: 15px; font-weight: 700;
+  }
+
+  #view-digest { display: none; }
+  #view-digest.active { display: block; }
+  #view-landing.hidden { display: none; }
+
+  .digest-meta { padding: 10px 16px 4px; font-size: 12px; color: #888; text-align: center; }
+  section.group { margin-top: 6px; }
+  .group-header {
+    padding: 18px 16px 8px; font-size: 15px; font-weight: 800; color: var(--yellow);
+    border-bottom: 1px solid #3a3b3b;
+  }
+  .group-count { color: #777; font-weight: 500; font-size: 12px; }
+
+  .story {
+    display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px;
+    border-bottom: 1px solid var(--yellow); text-decoration: none; color: inherit;
+  }
+  .story-thumb {
+    width: 64px; height: 64px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
+    background: #3a3b3b;
+  }
+  .story-body { flex: 1; min-width: 0; }
+  .story-title { font-size: 15px; font-weight: 700; line-height: 1.4; color: #fff; }
+  .story-title.rtl { direction: rtl; text-align: right; }
+  .story-title-en { font-size: 12px; color: #999; margin-top: 4px; font-style: italic; }
+  .story-sub { font-size: 12px; color: #999; margin-top: 6px; }
+
+  .region-divider {
+    height: 0; border-top: 1px dashed #6a6b6b; margin: 10px 16px;
+  }
+  .empty-state { text-align: center; padding: 60px 20px; color: #777; }
+  .empty-state .big { font-size: 40px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="side left" id="header-left"></div>
+  <div class="title" id="header-title" onclick="goHome()">Viral Digest</div>
+  <div class="side right">
+    <button class="icon-btn" onclick="toggleSettings(true)" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<div id="view-landing">
+  <button class="big-btn run" id="run-btn" onclick="triggerRun()">▶ Run Digest</button>
+  <button class="big-btn latest" id="latest-btn" onclick="loadLatest()">↻ Latest Digest</button>
+  <div id="landing-status"></div>
+</div>
+
+<div id="view-digest">
+  <div class="digest-meta" id="digest-meta"></div>
+  <div id="content"></div>
+</div>
+
+<div id="settings-overlay" onclick="if(event.target===this) toggleSettings(false)">
+  <div class="settings-sheet">
+    <h2>⚙ Settings</h2>
+    <label for="gh-owner">GitHub username</label>
+    <input id="gh-owner" placeholder="e.g. mskmd" autocomplete="off" autocapitalize="off">
+    <label for="gh-repo">Repository name</label>
+    <input id="gh-repo" placeholder="e.g. Viral-Engine" autocomplete="off" autocapitalize="off">
+    <label for="gh-token">Personal Access Token</label>
+    <input id="gh-token" type="password" placeholder="github_pat_..." autocomplete="off" autocapitalize="off">
+    <div class="hint">
+      Fine-grained token, scoped to this one repo only, with "Actions: Read & write" and
+      "Contents: Read" permissions. Generate at
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com/settings/personal-access-tokens/new</a>.
+      Stored only on this device — never sent anywhere except GitHub's API.
+    </div>
+    <button class="save" onclick="saveSettings()">Save</button>
+  </div>
+</div>
+
+<script>
+const CSV_PATH = 'latest_digest.csv';
+let thumbsOn = false;
+const thumbCache = new Map();
+
+function getConfig() {
+  return {
+    owner: localStorage.getItem('gh_owner') || '',
+    repo: localStorage.getItem('gh_repo') || '',
+    token: localStorage.getItem('gh_token') || '',
+  };
+}
+function isConfigured() {
+  const c = getConfig();
+  return c.owner && c.repo && c.token;
+}
+function toggleSettings(open) {
+  const overlay = document.getElementById('settings-overlay');
+  if (open) {
+    document.getElementById('gh-owner').value = localStorage.getItem('gh_owner') || '';
+    document.getElementById('gh-repo').value = localStorage.getItem('gh_repo') || '';
+    document.getElementById('gh-token').value = localStorage.getItem('gh_token') || '';
+    overlay.classList.add('open');
+  } else {
+    overlay.classList.remove('open');
+  }
+}
+function saveSettings() {
+  localStorage.setItem('gh_owner', document.getElementById('gh-owner').value.trim());
+  localStorage.setItem('gh_repo', document.getElementById('gh-repo').value.trim());
+  localStorage.setItem('gh_token', document.getElementById('gh-token').value.trim());
+  toggleSettings(false);
+}
+function ghHeaders() {
+  const c = getConfig();
+  return {
+    'Authorization': `Bearer ${c.token}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+}
+
+function goHome() {
+  document.getElementById('view-digest').classList.remove('active');
+  document.getElementById('view-landing').classList.remove('hidden');
+  document.getElementById('header-left').innerHTML = '';
+}
+function goToDigest() {
+  document.getElementById('view-landing').classList.add('hidden');
+  document.getElementById('view-digest').classList.add('active');
+  document.getElementById('header-left').innerHTML =
+    '<button class="icon-btn" onclick="toggleThumbs()" aria-label="Toggle thumbnails">' + (thumbsOn ? '🖼️' : '⬜') + '</button>';
+}
+function setStatus(msg, isError) {
+  const el = document.getElementById('landing-status');
+  el.textContent = msg;
+  el.className = isError ? 'error' : '';
+}
+
+async function latestRunId() {
+  const c = getConfig();
+  try {
+    const resp = await fetch(
+      `https://api.github.com/repos/${c.owner}/${c.repo}/actions/workflows/run.yml/runs?per_page=1`,
+      { headers: ghHeaders() }
+    );
+    const data = await resp.json();
+    const run = data.workflow_runs && data.workflow_runs[0];
+    return run ? run.id : null;
+  } catch (e) { return null; }
+}
+
+async function triggerRun() {
+  if (!isConfigured()) { toggleSettings(true); return; }
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Starting…';
+  const c = getConfig();
+  try {
+    // Record the newest existing run BEFORE dispatching. GitHub takes a few
+    // seconds to register a dispatched run, so polling "the newest run" right
+    // after a POST can pick up the PREVIOUS run — which is already completed —
+    // and instantly declare success while loading a stale digest.
+    const priorRunId = await latestRunId();
+
+    const dispatchResp = await fetch(
+      `https://api.github.com/repos/${c.owner}/${c.repo}/actions/workflows/run.yml/dispatches`,
+      { method: 'POST', headers: { ...ghHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: 'main' }) }
+    );
+    if (dispatchResp.status !== 204) {
+      throw new Error(`GitHub rejected the trigger (HTTP ${dispatchResp.status}). Check token permissions.`);
+    }
+    setStatus('Run started — typically takes 15–25 minutes.');
+    await pollRun(btn, priorRunId);
+  } catch (e) {
+    setStatus(e.message, true);
+    btn.disabled = false;
+    btn.innerHTML = '▶ Run Digest';
+  }
+}
+
+async function pollRun(btn, priorRunId) {
+  const c = getConfig();
+  const startedAt = Date.now();
+  const maxWaitMs = 50 * 60 * 1000;   // workflow timeout is 45 min
+  let sawOurRun = false;
+
+  const reset = () => { btn.disabled = false; btn.innerHTML = '▶ Run Digest'; };
+
+  while (Date.now() - startedAt < maxWaitMs) {
+    await new Promise(r => setTimeout(r, sawOurRun ? 20000 : 5000));
+    try {
+      const runsResp = await fetch(
+        `https://api.github.com/repos/${c.owner}/${c.repo}/actions/workflows/run.yml/runs?per_page=1`,
+        { headers: ghHeaders() }
+      );
+      const runsData = await runsResp.json();
+      const run = runsData.workflow_runs && runsData.workflow_runs[0];
+      if (!run) continue;
+
+      // Ignore anything that isn't the run we just started.
+      if (priorRunId !== null && run.id === priorRunId) {
+        btn.innerHTML = '<span class="spinner"></span>Queuing…';
+        continue;
+      }
+      sawOurRun = true;
+
+      if (run.status === 'completed') {
+        reset();
+        if (run.conclusion === 'success') {
+          setStatus('Run finished — loading digest…');
+          await loadLatest();
+        } else {
+          setStatus(`Run finished with status: ${run.conclusion}.`, true);
+        }
+        return;
+      }
+      const elapsedMin = Math.round((Date.now() - startedAt) / 60000);
+      btn.innerHTML = `<span class="spinner"></span>Running… (${elapsedMin} min)`;
+    } catch (e) {
+      // Transient network/API blip — keep polling rather than aborting the run.
+    }
+  }
+  setStatus('Still polling after 50 min — check GitHub Actions directly.', true);
+  reset();
+}
+
+async function loadLatest() {
+  if (!isConfigured()) { toggleSettings(true); return; }
+  setStatus('Loading latest digest…');
+  const c = getConfig();
+  try {
+    // cache-bust: the Contents API can serve a stale copy for a few seconds
+    // right after the workflow pushes, which would show the previous digest.
+    const resp = await fetch(
+      `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${CSV_PATH}?t=${Date.now()}`,
+      { headers: { ...ghHeaders(), 'Accept': 'application/vnd.github.raw+json' }, cache: 'no-store' }
+    );
+    if (resp.status === 404) { setStatus('No digest found yet — run it at least once.', true); return; }
+    if (!resp.ok) throw new Error(`Could not load digest (HTTP ${resp.status}).`);
+    const csvText = await resp.text();
+    renderDigest(csvText);
+    setStatus('');
+    goToDigest();
+  } catch (e) {
+    setStatus(e.message, true);
+  }
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], next = text[i + 1];
+    if (inQuotes) {
+      if (c === '"' && next === '"') { field += '"'; i++; }
+      else if (c === '"') { inQuotes = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && next === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = '';
+      } else { field += c; }
+    }
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || r[0]);
+}
+function isArabic(s) { return /[\u0600-\u06FF]/.test(s || ''); }
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderDigest(csvText) {
+  const rows = parseCSV(csvText);
+  const content = document.getElementById('content');
+  if (rows.length < 2) {
+    content.innerHTML = '<div class="empty-state"><div class="big">📭</div>No stories in the latest digest.</div>';
+    document.getElementById('digest-meta').textContent = '';
+    return;
+  }
+  // The engine writes the CSV as utf-8-sig, so the first header cell carries a
+  // BOM ("\uFEFFPlatform"). Without stripping it, indexOf('Platform') returns -1
+  // and every story's platform is undefined — which silently renders an empty
+  // digest. Trim the BOM (and stray whitespace) from every header cell.
+  const header = rows[0].map(h => (h || '').replace(/^\uFEFF/, '').trim());
+  const idx = name => header.indexOf(name);
+  const stories = rows.slice(1).map(r => ({
+    platform: r[idx('Platform')], score: r[idx('Score')], lang: r[idx('Language')],
+    region: r[idx('Region')],
+    title: r[idx('Title')], titleAr: r[idx('Title_AR')],
+    source: r[idx('Source')], date: r[idx('Date')], link: r[idx('Link')],
+  }));
+
+  // Order mirrors the email digest: Crime and Bizarre first for fast scanning,
+  // then the platform sections.
+  const groups = [
+    { key: 'CRIME',     label: 'جرائم' },
+    { key: 'BIZARRE',   label: 'غرائب' },
+    { key: 'STATEMENT', label: 'تصريحات' },
+    { key: 'RSS',       label: 'قصص RSS', regionSplit: true },
+    { key: 'X',         label: 'قصص X' },
+  ];
+
+  // Safety net: if the engine ever emits a Platform value this app doesn't
+  // know about, show it in its own trailing section rather than silently
+  // dropping those stories (which is exactly what happened to CRIME/BIZARRE
+  // when they were added engine-side but not here).
+  const knownKeys = new Set(groups.map(g => g.key));
+  const unknownKeys = [...new Set(stories.map(s => s.platform).filter(p => p && !knownKeys.has(p)))];
+  for (const k of unknownKeys) groups.push({ key: k, label: k });
+
+  let html = '';
+  let total = 0;
+  for (const g of groups) {
+    const items = stories.filter(s => s.platform === g.key);
+    if (!items.length) continue;
+    total += items.length;
+    html += `<section class="group"><div class="group-header">${g.label} <span class="group-count">(${items.length})</span></div>`;
+    let prevRegion = null;
+    items.forEach((s, i) => {
+      // RSS is region-grouped (Arab world first, then global) with a plain
+      // divider and no region label — matches the email digest layout.
+      if (g.regionSplit) {
+        if (prevRegion !== null && s.region !== prevRegion) {
+          html += '<div class="region-divider"></div>';
+        }
+        prevRegion = s.region;
+      }
+      const displayTitle = s.lang === 'ar' ? s.title : (s.titleAr || s.title);
+      const rtl = isArabic(displayTitle);
+      const showOriginal = s.lang !== 'ar' && s.titleAr;
+      const cardId = `${g.key}-${i}`;
+      html += `<a class="story" data-link="${escapeHtml(s.link)}" href="${escapeHtml(s.link)}" target="_blank" rel="noopener" id="card-${cardId}">
+        <img class="story-thumb" style="display:none" id="thumb-${cardId}" alt="">
+        <div class="story-body">
+          <div class="story-title ${rtl ? 'rtl' : ''}">${escapeHtml(displayTitle)}</div>
+          ${showOriginal ? `<div class="story-title-en">${escapeHtml(s.title)}</div>` : ''}
+          <div class="story-sub">${escapeHtml(s.source)} · ${escapeHtml(s.date)}</div>
+        </div>
+      </a>`;
+    });
+    html += `</section>`;
+  }
+  document.getElementById('digest-meta').textContent = `${total} stories`;
+  content.innerHTML = html || '<div class="empty-state"><div class="big">📭</div>Empty digest.</div>';
+
+  if (thumbsOn) observeThumbs();
+}
+
+function toggleThumbs() {
+  thumbsOn = !thumbsOn;
+  document.getElementById('header-left').innerHTML =
+    '<button class="icon-btn" onclick="toggleThumbs()" aria-label="Toggle thumbnails">' + (thumbsOn ? '🖼️' : '⬜') + '</button>';
+  document.querySelectorAll('.story-thumb').forEach(img => img.style.display = thumbsOn ? 'block' : 'none');
+  if (thumbsOn) observeThumbs();
+}
+
+let thumbObserver = null;
+function observeThumbs() {
+  if (thumbObserver) thumbObserver.disconnect();
+  thumbObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        fetchThumb(entry.target);
+        thumbObserver.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: '200px' });
+  document.querySelectorAll('.story-thumb').forEach(img => thumbObserver.observe(img));
+}
+
+async function fetchThumb(imgEl) {
+  const card = imgEl.closest('.story');
+  const link = card.getAttribute('data-link');
+  if (!link) return;
+  if (thumbCache.has(link)) {
+    const cached = thumbCache.get(link);
+    if (cached) { imgEl.src = cached; imgEl.style.display = 'block'; }
+    return;
+  }
+  try {
+    const resp = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(link)}`);
+    const data = await resp.json();
+    const imgUrl = data && data.data && data.data.image && data.data.image.url;
+    thumbCache.set(link, imgUrl || null);
+    if (imgUrl) { imgEl.src = imgUrl; imgEl.style.display = 'block'; }
+    else { imgEl.remove(); }
+  } catch (e) {
+    thumbCache.set(link, null);
+    imgEl.remove();
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
