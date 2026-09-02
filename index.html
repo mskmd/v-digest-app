@@ -34,7 +34,7 @@
      before. item 3: yellow bg (matches digest group headers), text in the
      app's own dark background color, date a lighter shade of that same gray. */
   header .title { font-size: 24.2px; font-weight: 700; color: var(--bg-dark); text-align: left; letter-spacing: 0.01em; }
-  header .header-date { font-size: 13px; color: rgba(39,41,41,0.65); margin-top: 2px; text-align: left; }
+  header .header-date { font-size: 13px; color: rgba(39,41,41,0.65); margin-top: 2px; margin-left: 2px; text-align: left; }
 
   #view-landing {
     padding: 96px 24px 24px; text-align: center;
@@ -83,6 +83,7 @@
     -webkit-mask-position: center; mask-position: center;
   }
   .tile-label { font-size: 16px; font-weight: 600; }
+  .tile-label.running { color: var(--yellow); }
   .tile:disabled { opacity: 0.5; pointer-events: none; }
   .tile .spinner {
     width: 28%; height: 28%; border: 3px solid rgba(0,0,0,0.15);
@@ -93,8 +94,16 @@
   /* item 3/4: the simulated staged-progress panel. Sits as a grid item
      between the two tile rows - grid-column spans both columns, which
      pushes Settings/CSV down to a new row automatically. */
+  /* The simulated staged-progress panel. Sits as a grid item between the
+     two tile rows - grid-column spans both columns, which pushes
+     Settings/CSV down to a new row automatically. Left/right margin is set
+     precisely in JS (alignProgressPanel()), not guessed here as a
+     percentage - the tile icons are inset within their grid columns by an
+     amount that doesn't translate to a clean single percentage of the
+     panel's own (different) width, so a CSS-only guess kept landing
+     visibly off. margin:0 here is just the pre-JS fallback. */
   .run-progress-panel {
-    display: none; grid-column: 1 / -1; margin: 0 5%; background: #1e1f1f; border-radius: 16px;
+    display: none; grid-column: 1 / -1; margin: 0; background: #1e1f1f; border-radius: 16px;
     padding: 14px 18px; text-align: left; direction: ltr;
   }
   .rp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -137,7 +146,9 @@
   #view-landing.hidden { display: none; }
 
   /* item 9: date + count, left side as before, just a different content string */
-  .digest-meta { padding: 10px 16px 4px; font-size: 12px; color: #888; text-align: left; }
+  /* digest-meta removed - date + story count now live in the header itself
+     (header-date), same as the landing page's title+date pattern, so both
+     headers share identical structure/height. */
 
   /* item 7/8: category headers - RTL, clearly darker than the page background,
      bigger than before for hierarchy, with an expand/collapse chevron.
@@ -216,7 +227,6 @@
 </div>
 
 <div id="view-digest">
-  <div class="digest-meta" id="digest-meta"></div>
   <div id="content"></div>
 </div>
 
@@ -293,10 +303,8 @@ function todayDateString() {
 function goToDigest() {
   document.getElementById('view-landing').classList.add('hidden');
   document.getElementById('view-digest').classList.add('active');
-  // item 4: header becomes "Stories" here, left-aligned, no subtitle (the
-  // date + count already show on the line below, via digest-meta).
-  document.getElementById('header-title').textContent = 'Stories';
-  document.getElementById('header-date').textContent = '';
+  // Header title/date for this view are set by renderDigest() itself now
+  // (it has the date + count in hand already) - not duplicated here.
   history.pushState({ view: 'digest' }, '', '#digest');
 }
 function showLandingView() {
@@ -380,6 +388,28 @@ const RUN_BASELINE_MS = 20 * 60 * 1000; // rough historical average sweep time
 const runState = { active: false, sawOurRun: false, runId: null, cancelled: false, startedAt: null };
 let runTimerInterval = null;
 
+// Measures the actual rendered tile icons and sets the panel's margins in
+// real pixels to match their edges exactly - CSS percentage guesses at this
+// kept landing visibly off (the tiles are inset within their own grid
+// columns, and the panel spans a different-width box, so a single %
+// doesn't translate cleanly between the two). Re-run on resize/orientation
+// change so it stays correct.
+function alignProgressPanel() {
+  const panel = document.getElementById('run-progress-panel');
+  const grid = document.querySelector('.tile-grid');
+  const leftIcon = document.querySelector('#run-btn .tile-icon');
+  const rightIcon = document.querySelector('#csv-btn .tile-icon');
+  if (!panel || !grid || !leftIcon || !rightIcon) return;
+  const gridRect = grid.getBoundingClientRect();
+  const leftRect = leftIcon.getBoundingClientRect();
+  const rightRect = rightIcon.getBoundingClientRect();
+  const leftInset = Math.max(leftRect.left - gridRect.left, 0);
+  const rightInset = Math.max(gridRect.right - rightRect.right, 0);
+  panel.style.marginLeft = `${leftInset}px`;
+  panel.style.marginRight = `${rightInset}px`;
+}
+window.addEventListener('resize', alignProgressPanel);
+
 function setRunIconIdle() {
   document.querySelector('#run-btn .tile-icon').innerHTML = '<img src="Run-1000.png" alt="">';
 }
@@ -420,6 +450,7 @@ function startStageTimer() {
 function resetRunUI() {
   setRunIconIdle();
   document.getElementById('run-label').textContent = 'Run';
+  document.getElementById('run-label').classList.remove('running');
   document.getElementById('run-progress-panel').style.display = 'none';
   if (runTimerInterval) { clearInterval(runTimerInterval); runTimerInterval = null; }
   runState.active = false;
@@ -442,8 +473,10 @@ async function triggerRun() {
   runState.cancelled = false;
   runState.startedAt = Date.now();
   setRunIconActive();
-  document.getElementById('run-label').textContent = 'Running';
+  document.getElementById('run-label').textContent = 'Running...';
+  document.getElementById('run-label').classList.add('running');
   document.getElementById('run-progress-panel').style.display = 'block';
+  alignProgressPanel();
   startStageTimer();
 
   const c = getConfig();
@@ -647,9 +680,10 @@ function toggleGroup(key) {
 function renderDigest(csvText, commitDate) {
   const rows = parseCSV(csvText);
   const content = document.getElementById('content');
+  document.getElementById('header-title').textContent = 'Stories';
   if (rows.length < 2) {
     content.innerHTML = '<div class="empty-state"><div class="big">&#128235;</div>No stories in the latest digest.</div>';
-    document.getElementById('digest-meta').textContent = '';
+    document.getElementById('header-date').textContent = '';
     return;
   }
   // The engine writes the CSV as utf-8-sig, so the first header cell carries a
@@ -723,12 +757,14 @@ function renderDigest(csvText, commitDate) {
     </section>`;
   }
 
-  // item 9: date of the digest (from the file's last commit) + story count.
+  // Date of the digest (from the file's last commit, formatted DD/MM/YYYY)
+  // + story count, shown in the header as the "Stories" subtitle - same
+  // slot/pattern as "Fetcher"'s date on the landing page.
   if (commitDate) {
-    const dateStr = commitDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    document.getElementById('digest-meta').textContent = `${dateStr} (${total})`;
+    const dateStr = commitDate.toLocaleDateString('en-GB');   // en-GB default = DD/MM/YYYY
+    document.getElementById('header-date').textContent = `${dateStr} (${total})`;
   } else {
-    document.getElementById('digest-meta').textContent = `${total} stories`;
+    document.getElementById('header-date').textContent = `(${total})`;
   }
   content.innerHTML = html || '<div class="empty-state"><div class="big">&#128235;</div>Empty digest.</div>';
 }
