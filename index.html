@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#eb4034">
-<title>Viral Digest</title>
+<meta name="theme-color" content="#f5dd07">
+<title>Fetcher</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,23 +26,19 @@
   }
 
   header {
-    background: var(--accent); color: white; padding: 14px 12px;
-    display: flex; align-items: center; justify-content: space-between;
+    background: var(--yellow); padding: 14px 24px;
+    display: block;
     position: sticky; top: 0; z-index: 20;
   }
-  header .side { width: 40px; display: flex; align-items: center; }
-  header .side.left { justify-content: flex-start; }
-  header .side.right { justify-content: flex-end; }
-  /* item 2: 22px -> 24.2px (+10%) */
-  header .title { font-size: 24.2px; font-weight: 700; cursor: pointer; text-align: center; flex: 1; letter-spacing: 0.01em; }
-  header button.icon-btn {
-    background: none; border: none; color: white; font-size: 20px; padding: 6px;
-    cursor: pointer; line-height: 1;
-  }
+  /* item 2/3: left-aligned title+date stack; item 2: 24.2px kept from
+     before. item 3: yellow bg (matches digest group headers), text in the
+     app's own dark background color, date a lighter shade of that same gray. */
+  header .title { font-size: 24.2px; font-weight: 700; color: var(--bg-dark); text-align: left; letter-spacing: 0.01em; }
+  header .header-date { font-size: 13px; color: rgba(39,41,41,0.65); margin-top: 2px; text-align: left; }
 
   #view-landing {
-    padding: 32px 24px 24px; text-align: center;
-    display: flex; flex-direction: column; min-height: calc(100dvh - 64px);
+    padding: 96px 24px 24px; text-align: center;
+    display: flex; flex-direction: column; min-height: calc(100dvh - 80px);
   }
   .tile-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
@@ -63,15 +59,24 @@
     transition: transform 0.12s ease;
   }
   .tile:active .tile-icon { transform: scale(0.94); }
-  .tile-icon img { width: 52.5%; height: 52.5%; object-fit: contain; }
-  /* item 5: the Run tile's "stop" state - a plain blue square, same footprint
-     as the other icon glyphs. item 6: Latest's four-line icon recolored to
-     match, via a CSS mask (the PNG supplies the shape from its alpha
-     channel; background-color supplies the exact color - works regardless
-     of whatever color was baked into the source image). */
+  .tile-icon img { object-fit: contain; }
+  /* item (this round): exact per-icon sizing, measured from each PNG's real
+     alpha bounding box (not guessed) — every icon's own internal canvas
+     padding differs slightly, so a single shared percentage either
+     over- or under-sized some of them. Each value below is calibrated so
+     the icon's VISIBLE glyph ends up the same on-screen size as the
+     solid stop-square (which has zero internal padding, at 52.5%). */
+  #run-btn .tile-icon img { width: 56.9%; height: 56.9%; }
+  #csv-btn .tile-icon img { width: 60.9%; height: 60.9%; }
+  #settings-btn .tile-icon img { width: 61.0%; height: 61.0%; }
+  /* Latest's four-line icon recolored to match the stop-blue, via a CSS mask
+     (the PNG supplies the shape from its alpha channel; background-color
+     supplies the exact color - works regardless of whatever color was
+     baked into the source image). Sizing below is measured, see comment
+     above .tile-icon img. */
   .stop-square { width: 52.5%; height: 52.5%; background: var(--stop-blue); border-radius: 6px; }
   .latest-icon-mask {
-    width: 52.5%; height: 52.5%; background-color: var(--stop-blue);
+    width: 64.9%; height: 64.9%; background-color: var(--stop-blue);
     -webkit-mask-image: url('Latest-1000.png'); mask-image: url('Latest-1000.png');
     -webkit-mask-size: contain; mask-size: contain;
     -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
@@ -89,21 +94,21 @@
      between the two tile rows - grid-column spans both columns, which
      pushes Settings/CSV down to a new row automatically. */
   .run-progress-panel {
-    display: none; grid-column: 1 / -1; background: #1e1f1f; border-radius: 16px;
+    display: none; grid-column: 1 / -1; margin: 0 5%; background: #1e1f1f; border-radius: 16px;
     padding: 14px 18px; text-align: left; direction: ltr;
   }
   .rp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
   .rp-stage-name { font-size: 14px; font-weight: 600; color: #eee; }
   .rp-step-counter { font-size: 12px; color: #999; }
   .rp-bar-track { width: 100%; height: 8px; background: #3a3b3b; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
-  .rp-bar-fill { height: 100%; width: 0%; background: var(--stop-blue); transition: width 0.4s ease; border-radius: 4px; }
+  .rp-bar-fill { height: 100%; width: 0%; background: var(--yellow); transition: width 0.4s ease; border-radius: 4px; }
   #rp-timer { font-size: 12px; color: #888; text-align: right; }
 
   /* item 6: transient cues (was #landing-status) - auto-hidden after 5s by JS */
   #landing-status { padding: 18px 4px 4px; font-size: 13px; color: #aaa; text-align: center; min-height: 18px; }
   #landing-status.error { color: #ff8a80; font-weight: 600; }
   /* item 6: only one date now, pinned to the bottom of the landing view */
-  .landing-footer-date { margin-top: auto; padding-top: 24px; font-size: 13px; color: #6f6f6f; text-align: center; }
+  /* footer date removed - the header date under "Fetcher" is the only one now */
 
   #settings-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 30;
@@ -173,9 +178,8 @@
 <body>
 
 <header>
-  <div class="side left" id="header-left"></div>
-  <div class="title" id="header-title" onclick="goHome()">Viral Digest</div>
-  <div class="side right"></div>
+  <div class="title" id="header-title">Fetcher</div>
+  <div class="header-date" id="header-date"></div>
 </header>
 
 <div id="view-landing">
@@ -209,7 +213,6 @@
   </div>
 
   <div id="landing-status"></div>
-  <div class="landing-footer-date" id="landing-date-bottom"></div>
 </div>
 
 <div id="view-digest">
@@ -276,29 +279,32 @@ function ghHeaders() {
   };
 }
 
-// item 11: back navigation via the History API, so both the on-screen back
-// button and Android's hardware/gesture back do the same thing instead of
-// the gesture just exiting the app (there was no pushed history entry for
-// it to "go back" to before).
+// item 11 (prior round): back navigation via the History API - a pushed
+// history entry on entering the digest view means Android's swipe/hardware
+// back does the right thing (returns to the tile grid) instead of exiting
+// the app outright. item 6 (this round): the on-screen back arrow is gone -
+// swipe/hardware back is the only way back now, but it still needs this
+// same pushState/popstate plumbing to work at all.
+function todayDateString() {
+  return new Date().toLocaleDateString('en-GB', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  });
+}
 function goToDigest() {
   document.getElementById('view-landing').classList.add('hidden');
   document.getElementById('view-digest').classList.add('active');
-  document.getElementById('header-left').innerHTML =
-    '<button class="icon-btn" onclick="history.back()" aria-label="Back">&larr;</button>';
+  // item 4: header becomes "Stories" here, left-aligned, no subtitle (the
+  // date + count already show on the line below, via digest-meta).
+  document.getElementById('header-title').textContent = 'Stories';
+  document.getElementById('header-date').textContent = '';
   history.pushState({ view: 'digest' }, '', '#digest');
 }
 function showLandingView() {
   document.getElementById('view-digest').classList.remove('active');
   document.getElementById('view-landing').classList.remove('hidden');
-  document.getElementById('header-left').innerHTML = '';
-}
-function goHome() {
-  // Header-title tap reuses the same path as hardware back, so both stay
-  // in sync - if we're on the digest view (with a pushed history entry),
-  // popping it triggers the popstate handler below. If already home, no-op.
-  if (document.getElementById('view-digest').classList.contains('active')) {
-    history.back();
-  }
+  // item 2: header reverts to the app name + today's date underneath.
+  document.getElementById('header-title').textContent = 'Fetcher';
+  document.getElementById('header-date').textContent = todayDateString();
 }
 window.addEventListener('popstate', () => showLandingView());
 
@@ -665,8 +671,8 @@ function renderDigest(csvText, commitDate) {
     { key: 'CRIME',     label: 'جرائم' },
     { key: 'BIZARRE',   label: 'غرائب' },
     { key: 'STATEMENT', label: 'تصريحات' },
-    { key: 'RSS',       label: 'قصص RSS', regionSplit: true },
-    { key: 'X',         label: 'قصص Twitter' },
+    { key: 'RSS',       label: 'تقارير', regionSplit: true },
+    { key: 'X',         label: 'تويتر' },
   ];
 
   // Safety net: if the engine ever emits a Platform value this app doesn't
@@ -731,13 +737,10 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-// item 6: the single remaining date, at the bottom of the landing view.
-(function fillDate() {
-  const today = new Date().toLocaleDateString('en-GB', {
-    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
-  });
-  document.getElementById('landing-date-bottom').textContent = today;
-})();
+// item: date under the app name in the header. The old bottom-of-page
+// footer date has been removed per explicit request - this is the only
+// date shown now.
+document.getElementById('header-date').textContent = todayDateString();
 </script>
 </body>
 </html>
