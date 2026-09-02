@@ -522,15 +522,6 @@ async function pollRun(priorRunId) {
   const pollStartedAt = Date.now();
   const maxWaitMs = 50 * 60 * 1000;   // workflow timeout is 45 min
 
-  async function doCancel(id) {
-    try {
-      await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/actions/runs/${id}/cancel`,
-        { method: 'POST', headers: ghHeaders() });
-      setStatus('Run cancelled.');
-    } catch (e) {
-      setStatus('Could not confirm cancellation - check GitHub Actions.', true);
-    }
-  }
   async function fetchLatestRun() {
     const resp = await fetch(
       `https://api.github.com/repos/${c.owner}/${c.repo}/actions/workflows/run.yml/runs?per_page=1`,
@@ -541,38 +532,20 @@ async function pollRun(priorRunId) {
   }
 
   while (Date.now() - pollStartedAt < maxWaitMs) {
-    if (runState.cancelled) {
-      if (runState.runId) {
-        await doCancel(runState.runId);
-        resetRunState();
-        return;
-      }
-      // Stop was tapped before we'd identified the run's id yet (normally a
-      // window of just a few seconds right after dispatch). Don't give up -
-      // that's exactly the bug this replaced: giving up here left the
-      // dispatched run executing to completion, unattended, while the UI
-      // claimed it had been cancelled. Hunt for the id with a tight poll
-      // instead, for up to 30s, then cancel it the moment it's found.
-      if (Date.now() - pollStartedAt >= 30000) {
-        setStatus('Could not confirm the run to cancel - check GitHub Actions.', true);
-        resetRunState();
-        return;
-      }
-      try {
-        const run = await fetchLatestRun();
-        if (run && !(priorRunId !== null && run.id === priorRunId)) {
-          runState.runId = run.id;
-          await doCancel(run.id);
-          resetRunState();
-          return;
-        }
-      } catch (e) { /* keep hunting until the 30s cap */ }
-      await new Promise(r => setTimeout(r, 2000));
-      continue;
-    }
-
+    // stopRun() now owns cancellation entirely - it sweeps every in-progress
+    // and queued run of this workflow directly, rather than this loop trying
+    // to identify and cancel one specific run id. Simpler and more robust:
+    // it works even if Stop is tapped before this loop ever learns an id,
+    // and it also catches any orphaned run left over from an earlier tap.
+    // resetRunState() is called ONLY here, once this loop has actually
+    // observed the cancellation - stopRun() must NOT call it (an earlier
+    // version did, "for tidiness", and that's exactly what silently broke
+    // cancellation the second time: cancelAllRuns() resolves fast enough
+    // that resetRunState() was clobbering runState.cancelled back to false
+    // before this loop's next check ever ran).
+    if (runState.cancelled) { resetRunState(); return; }
     await new Promise(r => setTimeout(r, runState.sawOurRun ? 20000 : 5000));
-    if (runState.cancelled) continue;   // re-checked at the top of the loop
+    if (runState.cancelled) { resetRunState(); return; }
     try {
       const run = await fetchLatestRun();
       if (!run) continue;
@@ -582,7 +555,7 @@ async function pollRun(priorRunId) {
 
       if (!runState.sawOurRun) {
         runState.sawOurRun = true;
-        runState.runId = run.id;   // needed for Stop to actually cancel it
+        runState.runId = run.id;
       }
 
       if (run.status === 'completed') {
@@ -603,15 +576,60 @@ async function pollRun(priorRunId) {
   resetRunState();
 }
 
+// Cancels EVERY in-progress or queued run of this specific workflow, not
+// just the one this session happens to be tracking. Scoped to run.yml only
+// (not every workflow in the repo, in case others ever get added). This is
+// what actually closes the gap that made Stop unreliable: tapping Run more
+// than once in a session (very easy to do while testing) leaves earlier
+// runs dispatched and unattended - stopping "the current one" never touched
+// those. A blanket sweep does, and it doesn't need to know any specific run
+// id ahead of time either, so there's no early-tap timing window to miss.
+async function cancelAllRuns() {
+  const c = getConfig();
+  let cancelled = 0, failed = 0;
+  for (const status of ['in_progress', 'queued']) {
+    try {
+      const resp = await fetch(
+        `https://api.github.com/repos/${c.owner}/${c.repo}/actions/workflows/run.yml/runs?status=${status}&per_page=100`,
+        { headers: ghHeaders() }
+      );
+      if (!resp.ok) { failed++; continue; }
+      const data = await resp.json();
+      const runs = data.workflow_runs || [];
+      for (const run of runs) {
+        try {
+          const cancelResp = await fetch(
+            `https://api.github.com/repos/${c.owner}/${c.repo}/actions/runs/${run.id}/cancel`,
+            { method: 'POST', headers: ghHeaders() }
+          );
+          if (cancelResp.status === 202) cancelled++; else failed++;
+        } catch (e) { failed++; }
+      }
+    } catch (e) { failed++; }
+  }
+  return { cancelled, failed };
+}
+
 async function stopRun() {
   if (!runState.active) return;
   runState.cancelled = true;
+  runState.active = false;   // safe to flip immediately - nothing else reads
+                              // this concurrently, unlike `cancelled` below
   resetRunVisuals();
-  setStatus('Cancelling...');
-  // The actual GitHub cancel call (and the final state reset) happens inside
-  // pollRun(), above - it's the only place that reliably knows the run's id,
-  // and it actively hunts for that id if Stop was tapped before it was known
-  // yet, instead of quietly doing nothing.
+  setStatus('Cancelling all runs...');
+  const { cancelled, failed } = await cancelAllRuns();
+  if (cancelled > 0 && failed === 0) {
+    setStatus(`Cancelled ${cancelled} run${cancelled > 1 ? 's' : ''}.`);
+  } else if (cancelled > 0 && failed > 0) {
+    setStatus(`Cancelled ${cancelled}, but ${failed} failed - check GitHub Actions.`, true);
+  } else if (failed > 0) {
+    setStatus('Cancel FAILED - check GitHub Actions directly.', true);
+  } else {
+    setStatus('No runs were active to cancel.');
+  }
+  // No resetRunState() here - see the comment in pollRun()'s loop above.
+  // runState.cancelled stays true; pollRun() clears it (and sawOurRun/runId)
+  // once its own loop actually observes it and exits.
 }
 
 // Shared by "Latest" (renders cards) and "CSV" (downloads the raw file) -
