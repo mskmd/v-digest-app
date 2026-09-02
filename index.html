@@ -764,6 +764,7 @@ function renderDigest(csvText, commitDate) {
   // Order mirrors the email digest: Crime and Bizarre first for fast scanning,
   // then the platform sections.
   const groups = [
+    { key: 'FEATURED',  label: 'أبرز القصص' },
     { key: 'CRIME',     label: 'جرائم' },
     { key: 'BIZARRE',   label: 'غرائب' },
     { key: 'STATEMENT', label: 'تصريحات' },
@@ -810,12 +811,16 @@ function renderDigest(csvText, commitDate) {
 
     // item 7: RTL header, darker background than the page, bigger text.
     // item 8: starts collapsed - tap the header to open just that category.
+    // FEATURED starts open, everything else starts collapsed underneath it -
+    // per explicit request: tapping Latest should land on the highlight
+    // reel expanded, not require an extra tap to see it.
+    const startsOpen = g.key === 'FEATURED';
     html += `<section class="group">
       <div class="group-header" onclick="toggleGroup('${g.key}')">
         <span class="group-header-text">${g.label} <span class="group-count">(${items.length})</span></span>
-        <span class="group-chevron" id="chevron-${g.key}">&#9656;</span>
+        <span class="group-chevron${startsOpen ? ' open' : ''}" id="chevron-${g.key}">&#9656;</span>
       </div>
-      <div class="group-body" id="body-${g.key}">${body}</div>
+      <div class="group-body${startsOpen ? ' open' : ''}" id="body-${g.key}">${body}</div>
     </section>`;
   }
 
