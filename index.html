@@ -16,6 +16,7 @@
     --bg-dark: #272929;
     --yellow: #f5dd07;
     --cyan: #07f5e5;
+    --stop-blue: #0047AB;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -32,32 +33,50 @@
   header .side { width: 40px; display: flex; align-items: center; }
   header .side.left { justify-content: flex-start; }
   header .side.right { justify-content: flex-end; }
-  header .title { font-size: 22px; font-weight: 700; cursor: pointer; text-align: center; flex: 1; letter-spacing: 0.01em; }
+  /* item 2: 22px -> 24.2px (+10%) */
+  header .title { font-size: 24.2px; font-weight: 700; cursor: pointer; text-align: center; flex: 1; letter-spacing: 0.01em; }
   header button.icon-btn {
     background: none; border: none; color: white; font-size: 20px; padding: 6px;
     cursor: pointer; line-height: 1;
   }
 
-  #view-landing { padding: 32px 24px 24px; text-align: center; }
-  .landing-date { font-size: 15px; color: #9a9a9a; margin-bottom: 28px; }
+  #view-landing {
+    padding: 32px 24px 24px; text-align: center;
+    display: flex; flex-direction: column; min-height: calc(100dvh - 64px);
+  }
   .tile-grid {
     display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
-    max-width: 420px; margin: 0 auto;
+    max-width: 420px; margin: 0 auto; width: 100%;
   }
   .tile {
     background: none; border: none; padding: 0; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     font-family: inherit; color: #eee;
   }
+  /* item 1: box shrunk to 80% (-20%); icon glyph bumped 42% -> 52.5% of the
+     smaller box so its ABSOLUTE on-screen size stays the same as before. */
   .tile-icon {
-    width: 100%; aspect-ratio: 1; border-radius: 20px;
+    width: 80%; aspect-ratio: 1; border-radius: 20px;
     background: #f1f1f1; overflow: hidden;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     transition: transform 0.12s ease;
   }
   .tile:active .tile-icon { transform: scale(0.94); }
-  .tile-icon img { width: 42%; height: 42%; object-fit: contain; }
+  .tile-icon img { width: 52.5%; height: 52.5%; object-fit: contain; }
+  /* item 5: the Run tile's "stop" state - a plain blue square, same footprint
+     as the other icon glyphs. item 6: Latest's four-line icon recolored to
+     match, via a CSS mask (the PNG supplies the shape from its alpha
+     channel; background-color supplies the exact color - works regardless
+     of whatever color was baked into the source image). */
+  .stop-square { width: 52.5%; height: 52.5%; background: var(--stop-blue); border-radius: 6px; }
+  .latest-icon-mask {
+    width: 52.5%; height: 52.5%; background-color: var(--stop-blue);
+    -webkit-mask-image: url('Latest-1000.png'); mask-image: url('Latest-1000.png');
+    -webkit-mask-size: contain; mask-size: contain;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+  }
   .tile-label { font-size: 16px; font-weight: 600; }
   .tile:disabled { opacity: 0.5; pointer-events: none; }
   .tile .spinner {
@@ -65,9 +84,26 @@
     border-top-color: #eb4034; border-radius: 50%; animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  #landing-status { padding: 22px 4px 4px; font-size: 13px; color: #aaa; text-align: center; min-height: 18px; }
+
+  /* item 3/4: the simulated staged-progress panel. Sits as a grid item
+     between the two tile rows - grid-column spans both columns, which
+     pushes Settings/CSV down to a new row automatically. */
+  .run-progress-panel {
+    display: none; grid-column: 1 / -1; background: #1e1f1f; border-radius: 16px;
+    padding: 14px 18px; text-align: left; direction: ltr;
+  }
+  .rp-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .rp-stage-name { font-size: 14px; font-weight: 600; color: #eee; }
+  .rp-step-counter { font-size: 12px; color: #999; }
+  .rp-bar-track { width: 100%; height: 8px; background: #3a3b3b; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+  .rp-bar-fill { height: 100%; width: 0%; background: var(--stop-blue); transition: width 0.4s ease; border-radius: 4px; }
+  #rp-timer { font-size: 12px; color: #888; text-align: right; }
+
+  /* item 6: transient cues (was #landing-status) - auto-hidden after 5s by JS */
+  #landing-status { padding: 18px 4px 4px; font-size: 13px; color: #aaa; text-align: center; min-height: 18px; }
   #landing-status.error { color: #ff8a80; font-weight: 600; }
-  .landing-footer-date { margin-top: 48px; font-size: 13px; color: #6f6f6f; text-align: center; }
+  /* item 6: only one date now, pinned to the bottom of the landing view */
+  .landing-footer-date { margin-top: auto; padding-top: 24px; font-size: 13px; color: #6f6f6f; text-align: center; }
 
   #settings-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 30;
@@ -95,21 +131,31 @@
   #view-digest.active { display: block; }
   #view-landing.hidden { display: none; }
 
-  .digest-meta { padding: 10px 16px 4px; font-size: 12px; color: #888; text-align: center; }
+  /* item 9: date + count, left side as before, just a different content string */
+  .digest-meta { padding: 10px 16px 4px; font-size: 12px; color: #888; text-align: left; }
+
+  /* item 7/8: category headers - RTL, clearly darker than the page background,
+     bigger than before for hierarchy, with an expand/collapse chevron.
+     item 8: bodies start collapsed; tapping a header toggles just that one. */
   section.group { margin-top: 6px; }
   .group-header {
-    padding: 18px 16px 8px; font-size: 15px; font-weight: 800; color: var(--yellow);
-    border-bottom: 1px solid #3a3b3b;
+    display: flex; align-items: center; justify-content: space-between; flex-direction: row-reverse;
+    padding: 14px 16px; font-size: 18px; font-weight: 800; color: var(--yellow);
+    background: #1e1f1f; border-bottom: 1px solid #3a3b3b; cursor: pointer;
   }
-  .group-count { color: #777; font-weight: 500; font-size: 12px; }
+  .group-header-text { direction: rtl; text-align: right; }
+  .group-count { color: #999; font-weight: 500; font-size: 13px; }
+  .group-chevron {
+    font-size: 13px; color: #999; display: inline-block;
+    transition: transform 0.2s ease; margin-left: 4px;
+  }
+  .group-chevron.open { transform: rotate(90deg); }
+  .group-body { display: none; }
+  .group-body.open { display: block; }
 
   .story {
     display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px;
     border-bottom: 1px solid var(--yellow); text-decoration: none; color: inherit;
-  }
-  .story-thumb {
-    width: 64px; height: 64px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
-    background: #3a3b3b;
   }
   .story-body { flex: 1; min-width: 0; }
   .story-title { font-size: 15px; font-weight: 700; line-height: 1.4; color: #fff; }
@@ -133,17 +179,25 @@
 </header>
 
 <div id="view-landing">
-  <div class="landing-date" id="landing-date-top"></div>
-
   <div class="tile-grid">
-    <button class="tile" id="run-btn" onclick="triggerRun()">
+    <button class="tile" id="run-btn" onclick="handleRunTap()">
       <div class="tile-icon"><img src="Run-1000.png" alt=""></div>
       <div class="tile-label" id="run-label">Run</div>
     </button>
     <button class="tile" id="latest-btn" onclick="loadLatest()">
-      <div class="tile-icon"><img src="Latest-1000.png" alt=""></div>
+      <div class="tile-icon"><div class="latest-icon-mask"></div></div>
       <div class="tile-label" id="latest-label">Latest</div>
     </button>
+
+    <div class="run-progress-panel" id="run-progress-panel">
+      <div class="rp-row">
+        <span class="rp-stage-name" id="rp-stage-name">-</span>
+        <span class="rp-step-counter" id="rp-step-counter">Step 0/6</span>
+      </div>
+      <div class="rp-bar-track"><div class="rp-bar-fill" id="rp-bar-fill"></div></div>
+      <div id="rp-timer">00:00</div>
+    </div>
+
     <button class="tile" id="settings-btn" onclick="toggleSettings(true)">
       <div class="tile-icon"><img src="Settings-1000.png" alt=""></div>
       <div class="tile-label">Settings</div>
@@ -165,7 +219,7 @@
 
 <div id="settings-overlay" onclick="if(event.target===this) toggleSettings(false)">
   <div class="settings-sheet">
-    <h2>⚙ Settings</h2>
+    <h2>&#9881; Settings</h2>
     <label for="gh-owner">GitHub username</label>
     <input id="gh-owner" placeholder="e.g. mskmd" autocomplete="off" autocapitalize="off">
     <label for="gh-repo">Repository name</label>
@@ -176,7 +230,7 @@
       Fine-grained token, scoped to this one repo only, with "Actions: Read & write" and
       "Contents: Read" permissions. Generate at
       <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com/settings/personal-access-tokens/new</a>.
-      Stored only on this device — never sent anywhere except GitHub's API.
+      Stored only on this device - never sent anywhere except GitHub's API.
     </div>
     <button class="save" onclick="saveSettings()">Save</button>
   </div>
@@ -184,8 +238,6 @@
 
 <script>
 const CSV_PATH = 'latest_digest.csv';
-let thumbsOn = false;
-const thumbCache = new Map();
 
 function getConfig() {
   return {
@@ -224,21 +276,43 @@ function ghHeaders() {
   };
 }
 
-function goHome() {
-  document.getElementById('view-digest').classList.remove('active');
-  document.getElementById('view-landing').classList.remove('hidden');
-  document.getElementById('header-left').innerHTML = '';
-}
+// item 11: back navigation via the History API, so both the on-screen back
+// button and Android's hardware/gesture back do the same thing instead of
+// the gesture just exiting the app (there was no pushed history entry for
+// it to "go back" to before).
 function goToDigest() {
   document.getElementById('view-landing').classList.add('hidden');
   document.getElementById('view-digest').classList.add('active');
   document.getElementById('header-left').innerHTML =
-    '<button class="icon-btn" onclick="toggleThumbs()" aria-label="Toggle thumbnails">' + (thumbsOn ? '🖼️' : '⬜') + '</button>';
+    '<button class="icon-btn" onclick="history.back()" aria-label="Back">&larr;</button>';
+  history.pushState({ view: 'digest' }, '', '#digest');
 }
+function showLandingView() {
+  document.getElementById('view-digest').classList.remove('active');
+  document.getElementById('view-landing').classList.remove('hidden');
+  document.getElementById('header-left').innerHTML = '';
+}
+function goHome() {
+  // Header-title tap reuses the same path as hardware back, so both stay
+  // in sync - if we're on the digest view (with a pushed history entry),
+  // popping it triggers the popstate handler below. If already home, no-op.
+  if (document.getElementById('view-digest').classList.contains('active')) {
+    history.back();
+  }
+}
+window.addEventListener('popstate', () => showLandingView());
+
+// item 6: status cues now auto-clear after 5 seconds instead of persisting
+// until overwritten by the next one.
+let statusTimeout = null;
 function setStatus(msg, isError) {
   const el = document.getElementById('landing-status');
   el.textContent = msg;
   el.className = isError ? 'error' : '';
+  if (statusTimeout) clearTimeout(statusTimeout);
+  if (msg) {
+    statusTimeout = setTimeout(() => { el.textContent = ''; el.className = ''; }, 5000);
+  }
 }
 
 async function latestRunId() {
@@ -254,10 +328,10 @@ async function latestRunId() {
   } catch (e) { return null; }
 }
 
-// v15: tiles carry an icon image + a separate label element now (the old
-// buttons were plain text and could be safely overwritten wholesale while
-// "running"; overwriting innerHTML here would blank out the icon). Swap the
-// icon for a spinner and update only the label text instead.
+// Generic busy/idle helpers - still used by Latest/CSV (which just spin and
+// re-enable). The Run tile has its own dedicated logic below because it
+// needs to stay tappable while "busy" (to allow Stop) and its icon swaps to
+// a distinct blue square rather than a spinner.
 function setTileBusy(tileId, labelId, busyText) {
   const tile = document.getElementById(tileId);
   const iconBox = tile.querySelector('.tile-icon');
@@ -274,16 +348,106 @@ function setTileIdle(tileId, labelId, idleText) {
   document.getElementById(labelId).textContent = idleText;
 }
 
+// -- item 3/4/5: Run tile state machine + simulated staged progress --------
+//
+// GitHub's Actions API only reports queued / in_progress / completed for a
+// whole workflow run - it has no concept of "internal step 3 of 6". There is
+// no channel back from viral_engine.py to this app mid-run (that would need
+// the workflow to publish progress somewhere pollable, which is out of scope
+// here). So the per-stage breakdown below is a SIMULATION: named stages with
+// rough relative-duration weights, estimated from real run logs, advanced by
+// elapsed wall-clock time against a rough historical baseline. It is honest
+// about being an estimate - it deliberately caps at 97% while still polling
+// and only ever reaches 100% at the moment the real GitHub status flips to
+// completed, so it can undersell but never oversell progress.
+const RUN_STAGES = [
+  { name: 'Harvesting sources', weight: 30 },
+  { name: 'Scoring stories', weight: 35 },
+  { name: 'Ranking & capping', weight: 8 },
+  { name: 'Translating', weight: 17 },
+  { name: 'Deduping', weight: 5 },
+  { name: 'Sending digest', weight: 5 },
+];
+const RUN_STAGE_TOTAL_WEIGHT = RUN_STAGES.reduce((a, s) => a + s.weight, 0);
+const RUN_BASELINE_MS = 20 * 60 * 1000; // rough historical average sweep time
+
+const runState = { active: false, sawOurRun: false, runId: null, cancelled: false, startedAt: null };
+let runTimerInterval = null;
+
+function setRunIconIdle() {
+  document.querySelector('#run-btn .tile-icon').innerHTML = '<img src="Run-1000.png" alt="">';
+}
+function setRunIconActive() {
+  document.querySelector('#run-btn .tile-icon').innerHTML = '<div class="stop-square"></div>';
+}
+
+function updateStageDisplay() {
+  const elapsed = Date.now() - runState.startedAt;
+  const mins = Math.floor(elapsed / 60000), secs = Math.floor((elapsed % 60000) / 1000);
+  document.getElementById('rp-timer').textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+  if (!runState.sawOurRun) {
+    document.getElementById('rp-stage-name').textContent = 'Queued - waiting for a runner...';
+    document.getElementById('rp-step-counter').textContent = `Step 0/${RUN_STAGES.length}`;
+    document.getElementById('rp-bar-fill').style.width = '0%';
+    return;
+  }
+
+  const frac = Math.min(elapsed / RUN_BASELINE_MS, 0.97);
+  const target = frac * RUN_STAGE_TOTAL_WEIGHT;
+  let acc = 0, idx = RUN_STAGES.length - 1, withinFrac = 1;
+  for (let i = 0; i < RUN_STAGES.length; i++) {
+    const w = RUN_STAGES[i].weight;
+    if (target < acc + w) { idx = i; withinFrac = w > 0 ? (target - acc) / w : 1; break; }
+    acc += w;
+  }
+  document.getElementById('rp-stage-name').textContent = RUN_STAGES[idx].name;
+  document.getElementById('rp-step-counter').textContent = `Step ${idx + 1}/${RUN_STAGES.length}`;
+  document.getElementById('rp-bar-fill').style.width = `${Math.round(withinFrac * 100)}%`;
+}
+function startStageTimer() {
+  if (runTimerInterval) clearInterval(runTimerInterval);
+  updateStageDisplay();
+  runTimerInterval = setInterval(updateStageDisplay, 500);
+}
+
+function resetRunUI() {
+  setRunIconIdle();
+  document.getElementById('run-label').textContent = 'Run';
+  document.getElementById('run-progress-panel').style.display = 'none';
+  if (runTimerInterval) { clearInterval(runTimerInterval); runTimerInterval = null; }
+  runState.active = false;
+  runState.sawOurRun = false;
+  runState.runId = null;
+  runState.cancelled = false;
+}
+
+function handleRunTap() {
+  if (runState.active) stopRun(); else triggerRun();
+}
+
 async function triggerRun() {
   if (!isConfigured()) { toggleSettings(true); return; }
-  setTileBusy('run-btn', 'run-label', 'Starting…');
+  if (runState.active) return;
+
+  runState.active = true;
+  runState.sawOurRun = false;
+  runState.runId = null;
+  runState.cancelled = false;
+  runState.startedAt = Date.now();
+  setRunIconActive();
+  document.getElementById('run-label').textContent = 'Running';
+  document.getElementById('run-progress-panel').style.display = 'block';
+  startStageTimer();
+
   const c = getConfig();
   try {
     // Record the newest existing run BEFORE dispatching. GitHub takes a few
     // seconds to register a dispatched run, so polling "the newest run" right
-    // after a POST can pick up the PREVIOUS run — which is already completed —
+    // after a POST can pick up the PREVIOUS run - which is already completed -
     // and instantly declare success while loading a stale digest.
     const priorRunId = await latestRunId();
+    if (runState.cancelled) return;
 
     const dispatchResp = await fetch(
       `https://api.github.com/repos/${c.owner}/${c.repo}/actions/workflows/run.yml/dispatches`,
@@ -293,24 +457,23 @@ async function triggerRun() {
     if (dispatchResp.status !== 204) {
       throw new Error(`GitHub rejected the trigger (HTTP ${dispatchResp.status}). Check token permissions.`);
     }
-    setStatus('Run started — typically takes 15–25 minutes.');
+    setStatus('Run started.');
     await pollRun(priorRunId);
   } catch (e) {
     setStatus(e.message, true);
-    setTileIdle('run-btn', 'run-label', 'Run');
+    resetRunUI();
   }
 }
 
 async function pollRun(priorRunId) {
   const c = getConfig();
-  const startedAt = Date.now();
+  const pollStartedAt = Date.now();
   const maxWaitMs = 50 * 60 * 1000;   // workflow timeout is 45 min
-  let sawOurRun = false;
 
-  const reset = () => setTileIdle('run-btn', 'run-label', 'Run');
-
-  while (Date.now() - startedAt < maxWaitMs) {
-    await new Promise(r => setTimeout(r, sawOurRun ? 20000 : 5000));
+  while (Date.now() - pollStartedAt < maxWaitMs) {
+    if (runState.cancelled) return;
+    await new Promise(r => setTimeout(r, runState.sawOurRun ? 20000 : 5000));
+    if (runState.cancelled) return;
     try {
       const runsResp = await fetch(
         `https://api.github.com/repos/${c.owner}/${c.repo}/actions/workflows/run.yml/runs?per_page=1`,
@@ -321,33 +484,54 @@ async function pollRun(priorRunId) {
       if (!run) continue;
 
       // Ignore anything that isn't the run we just started.
-      if (priorRunId !== null && run.id === priorRunId) {
-        document.getElementById('run-label').textContent = 'Queuing…';
-        continue;
+      if (priorRunId !== null && run.id === priorRunId) continue;
+
+      if (!runState.sawOurRun) {
+        runState.sawOurRun = true;
+        runState.runId = run.id;   // needed for Stop to actually cancel it
       }
-      sawOurRun = true;
 
       if (run.status === 'completed') {
-        reset();
+        resetRunUI();
         if (run.conclusion === 'success') {
-          setStatus('Run finished — loading digest…');
+          setStatus('Run finished - loading digest...');
           await loadLatest();
         } else {
           setStatus(`Run finished with status: ${run.conclusion}.`, true);
         }
         return;
       }
-      const elapsedMin = Math.round((Date.now() - startedAt) / 60000);
-      document.getElementById('run-label').textContent = `${elapsedMin}m…`;
     } catch (e) {
-      // Transient network/API blip — keep polling rather than aborting the run.
+      // Transient network/API blip - keep polling rather than aborting the run.
     }
   }
-  setStatus('Still polling after 50 min — check GitHub Actions directly.', true);
-  reset();
+  setStatus('Still polling after 50 min - check GitHub Actions directly.', true);
+  resetRunUI();
 }
 
-// Shared by "Latest" (renders cards) and "CSV" (downloads the raw file) —
+async function stopRun() {
+  if (!runState.active) return;
+  runState.cancelled = true;
+  const runId = runState.runId;
+  const c = getConfig();
+  resetRunUI();   // instant UI feedback; don't wait on the network round-trip
+  if (runId) {
+    setStatus('Cancelling...');
+    try {
+      await fetch(`https://api.github.com/repos/${c.owner}/${c.repo}/actions/runs/${runId}/cancel`,
+        { method: 'POST', headers: ghHeaders() });
+      setStatus('Run cancelled.');
+    } catch (e) {
+      setStatus('Could not confirm cancellation - check GitHub Actions.', true);
+    }
+  } else {
+    // Still in the ~5-10s window before GitHub had registered a distinct run
+    // id for us to target - nothing to cancel via the API yet.
+    setStatus('Run cancelled before it started.');
+  }
+}
+
+// Shared by "Latest" (renders cards) and "CSV" (downloads the raw file) -
 // both just need the current latest_digest.csv content from the repo.
 async function fetchLatestCsv() {
   const c = getConfig();
@@ -357,18 +541,34 @@ async function fetchLatestCsv() {
     `https://api.github.com/repos/${c.owner}/${c.repo}/contents/${CSV_PATH}?t=${Date.now()}`,
     { headers: { ...ghHeaders(), 'Accept': 'application/vnd.github.raw+json' }, cache: 'no-store' }
   );
-  if (resp.status === 404) throw new Error('No digest found yet — run it at least once.');
+  if (resp.status === 404) throw new Error('No digest found yet - run it at least once.');
   if (!resp.ok) throw new Error(`Could not load digest (HTTP ${resp.status}).`);
   return resp.text();
 }
 
+// item 9: the last commit touching latest_digest.csv tells us when the
+// engine actually produced this digest (far more meaningful than "today").
+async function fetchDigestCommitDate() {
+  const c = getConfig();
+  try {
+    const resp = await fetch(
+      `https://api.github.com/repos/${c.owner}/${c.repo}/commits?path=${CSV_PATH}&per_page=1`,
+      { headers: ghHeaders() }
+    );
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const iso = data && data[0] && data[0].commit && data[0].commit.committer && data[0].commit.committer.date;
+    return iso ? new Date(iso) : null;
+  } catch (e) { return null; }
+}
+
 async function loadLatest() {
   if (!isConfigured()) { toggleSettings(true); return; }
-  setTileBusy('latest-btn', 'latest-label', 'Loading…');
-  setStatus('Loading latest digest…');
+  setTileBusy('latest-btn', 'latest-label', 'Loading...');
+  setStatus('Loading latest digest...');
   try {
-    const csvText = await fetchLatestCsv();
-    renderDigest(csvText);
+    const [csvText, commitDate] = await Promise.all([fetchLatestCsv(), fetchDigestCommitDate()]);
+    renderDigest(csvText, commitDate);
     setStatus('');
     goToDigest();
   } catch (e) {
@@ -380,8 +580,8 @@ async function loadLatest() {
 
 async function downloadCsv() {
   if (!isConfigured()) { toggleSettings(true); return; }
-  setTileBusy('csv-btn', 'csv-label', 'Downloading…');
-  setStatus('Downloading CSV…');
+  setTileBusy('csv-btn', 'csv-label', 'Downloading...');
+  setStatus('Downloading CSV...');
   try {
     const csvText = await fetchLatestCsv();
     // Prepend a BOM so Arabic text opens correctly in Excel/Sheets, matching
@@ -430,17 +630,25 @@ function escapeHtml(s) {
   return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function renderDigest(csvText) {
+// item 8: expand/collapse - independent per category, all start collapsed.
+function toggleGroup(key) {
+  const body = document.getElementById(`body-${key}`);
+  const chevron = document.getElementById(`chevron-${key}`);
+  const isOpen = body.classList.toggle('open');
+  chevron.classList.toggle('open', isOpen);
+}
+
+function renderDigest(csvText, commitDate) {
   const rows = parseCSV(csvText);
   const content = document.getElementById('content');
   if (rows.length < 2) {
-    content.innerHTML = '<div class="empty-state"><div class="big">📭</div>No stories in the latest digest.</div>';
+    content.innerHTML = '<div class="empty-state"><div class="big">&#128235;</div>No stories in the latest digest.</div>';
     document.getElementById('digest-meta').textContent = '';
     return;
   }
   // The engine writes the CSV as utf-8-sig, so the first header cell carries a
   // BOM ("\uFEFFPlatform"). Without stripping it, indexOf('Platform') returns -1
-  // and every story's platform is undefined — which silently renders an empty
+  // and every story's platform is undefined - which silently renders an empty
   // digest. Trim the BOM (and stray whitespace) from every header cell.
   const header = rows[0].map(h => (h || '').replace(/^\uFEFF/, '').trim());
   const idx = name => header.indexOf(name);
@@ -458,13 +666,12 @@ function renderDigest(csvText) {
     { key: 'BIZARRE',   label: 'غرائب' },
     { key: 'STATEMENT', label: 'تصريحات' },
     { key: 'RSS',       label: 'قصص RSS', regionSplit: true },
-    { key: 'X',         label: 'قصص X' },
+    { key: 'X',         label: 'قصص Twitter' },
   ];
 
   // Safety net: if the engine ever emits a Platform value this app doesn't
   // know about, show it in its own trailing section rather than silently
-  // dropping those stories (which is exactly what happened to CRIME/BIZARRE
-  // when they were added engine-side but not here).
+  // dropping those stories.
   const knownKeys = new Set(groups.map(g => g.key));
   const unknownKeys = [...new Set(stories.map(s => s.platform).filter(p => p && !knownKeys.has(p)))];
   for (const k of unknownKeys) groups.push({ key: k, label: k });
@@ -475,93 +682,60 @@ function renderDigest(csvText) {
     const items = stories.filter(s => s.platform === g.key);
     if (!items.length) continue;
     total += items.length;
-    html += `<section class="group"><div class="group-header">${g.label} <span class="group-count">(${items.length})</span></div>`;
+
+    let body = '';
     let prevRegion = null;
     items.forEach((s, i) => {
       // RSS is region-grouped (Arab world first, then global) with a plain
-      // divider and no region label — matches the email digest layout.
+      // divider and no region label - matches the email digest layout.
       if (g.regionSplit) {
         if (prevRegion !== null && s.region !== prevRegion) {
-          html += '<div class="region-divider"></div>';
+          body += '<div class="region-divider"></div>';
         }
         prevRegion = s.region;
       }
       const displayTitle = s.lang === 'ar' ? s.title : (s.titleAr || s.title);
       const rtl = isArabic(displayTitle);
       const showOriginal = s.lang !== 'ar' && s.titleAr;
-      const cardId = `${g.key}-${i}`;
-      html += `<a class="story" data-link="${escapeHtml(s.link)}" href="${escapeHtml(s.link)}" target="_blank" rel="noopener" id="card-${cardId}">
-        <img class="story-thumb" style="display:none" id="thumb-${cardId}" alt="">
+      body += `<a class="story" href="${escapeHtml(s.link)}" target="_blank" rel="noopener">
         <div class="story-body">
           <div class="story-title ${rtl ? 'rtl' : ''}">${escapeHtml(displayTitle)}</div>
           ${showOriginal ? `<div class="story-title-en">${escapeHtml(s.title)}</div>` : ''}
-          <div class="story-sub">${escapeHtml(s.source)} · ${escapeHtml(s.date)}</div>
+          <div class="story-sub">${escapeHtml(s.source)} &middot; ${escapeHtml(s.date)}</div>
         </div>
       </a>`;
     });
-    html += `</section>`;
+
+    // item 7: RTL header, darker background than the page, bigger text.
+    // item 8: starts collapsed - tap the header to open just that category.
+    html += `<section class="group">
+      <div class="group-header" onclick="toggleGroup('${g.key}')">
+        <span class="group-header-text">${g.label} <span class="group-count">(${items.length})</span></span>
+        <span class="group-chevron" id="chevron-${g.key}">&#9656;</span>
+      </div>
+      <div class="group-body" id="body-${g.key}">${body}</div>
+    </section>`;
   }
-  document.getElementById('digest-meta').textContent = `${total} stories`;
-  content.innerHTML = html || '<div class="empty-state"><div class="big">📭</div>Empty digest.</div>';
 
-  if (thumbsOn) observeThumbs();
-}
-
-function toggleThumbs() {
-  thumbsOn = !thumbsOn;
-  document.getElementById('header-left').innerHTML =
-    '<button class="icon-btn" onclick="toggleThumbs()" aria-label="Toggle thumbnails">' + (thumbsOn ? '🖼️' : '⬜') + '</button>';
-  document.querySelectorAll('.story-thumb').forEach(img => img.style.display = thumbsOn ? 'block' : 'none');
-  if (thumbsOn) observeThumbs();
-}
-
-let thumbObserver = null;
-function observeThumbs() {
-  if (thumbObserver) thumbObserver.disconnect();
-  thumbObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        fetchThumb(entry.target);
-        thumbObserver.unobserve(entry.target);
-      }
-    });
-  }, { rootMargin: '200px' });
-  document.querySelectorAll('.story-thumb').forEach(img => thumbObserver.observe(img));
-}
-
-async function fetchThumb(imgEl) {
-  const card = imgEl.closest('.story');
-  const link = card.getAttribute('data-link');
-  if (!link) return;
-  if (thumbCache.has(link)) {
-    const cached = thumbCache.get(link);
-    if (cached) { imgEl.src = cached; imgEl.style.display = 'block'; }
-    return;
+  // item 9: date of the digest (from the file's last commit) + story count.
+  if (commitDate) {
+    const dateStr = commitDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    document.getElementById('digest-meta').textContent = `${dateStr} (${total})`;
+  } else {
+    document.getElementById('digest-meta').textContent = `${total} stories`;
   }
-  try {
-    const resp = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(link)}`);
-    const data = await resp.json();
-    const imgUrl = data && data.data && data.data.image && data.data.image.url;
-    thumbCache.set(link, imgUrl || null);
-    if (imgUrl) { imgEl.src = imgUrl; imgEl.style.display = 'block'; }
-    else { imgEl.remove(); }
-  } catch (e) {
-    thumbCache.set(link, null);
-    imgEl.remove();
-  }
+  content.innerHTML = html || '<div class="empty-state"><div class="big">&#128235;</div>Empty digest.</div>';
 }
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
-// Today's date, shown once under the header and once in the footer, matching
-// the "Tuesday, 01 September, 2026" style from the design.
-(function fillDates() {
+// item 6: the single remaining date, at the bottom of the landing view.
+(function fillDate() {
   const today = new Date().toLocaleDateString('en-GB', {
     weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
   });
-  document.getElementById('landing-date-top').textContent = today;
   document.getElementById('landing-date-bottom').textContent = today;
 })();
 </script>
