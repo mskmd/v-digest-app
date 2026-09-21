@@ -797,9 +797,11 @@ function renderDigest(csvText, commitDate) {
         }
         prevRegion = s.region;
       }
-      const displayTitle = s.lang === 'ar' ? s.title : (s.titleAr || s.title);
+      // The engine's headline desk writes a clean Arabic headline for every
+      // story (Title_AR), including Arabic-source ones - show it first.
+      const displayTitle = s.titleAr || s.title;
       const rtl = isArabic(displayTitle);
-      const showOriginal = s.lang !== 'ar' && s.titleAr;
+      const showOriginal = s.lang !== 'ar' && s.titleAr && s.titleAr !== s.title;
       body += `<a class="story" href="${escapeHtml(s.link)}" target="_blank" rel="noopener">
         <div class="story-body">
           <div class="story-title ${rtl ? 'rtl' : ''}">${escapeHtml(displayTitle)}</div>
