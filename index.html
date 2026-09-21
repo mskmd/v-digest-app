@@ -763,7 +763,12 @@ function renderDigest(csvText, commitDate) {
 
   // Order mirrors the email digest: Crime and Bizarre first for fast scanning,
   // then the platform sections.
+  // v16.2: the engine now sends ONE ranked list - TOP (the first 10) and MORE
+  // (the rest), each story exactly once. The older section keys stay mapped
+  // only so a digest produced before this change still renders sensibly.
   const groups = [
+    { key: 'TOP',       label: 'أبرز القصص' },
+    { key: 'MORE',      label: 'بقية القصص' },
     { key: 'FEATURED',  label: 'أبرز القصص' },
     { key: 'CRIME',     label: 'جرائم' },
     { key: 'BIZARRE',   label: 'غرائب' },
@@ -816,7 +821,9 @@ function renderDigest(csvText, commitDate) {
     // FEATURED starts open, everything else starts collapsed underneath it -
     // per explicit request: tapping Latest should land on the highlight
     // reel expanded, not require an extra tap to see it.
-    const startsOpen = g.key === 'FEATURED';
+    // Both halves of the list start open - it's a 50-title list meant to be
+    // scrolled straight through. Headers still collapse on tap.
+    const startsOpen = g.key === 'TOP' || g.key === 'MORE' || g.key === 'FEATURED';
     html += `<section class="group">
       <div class="group-header" onclick="toggleGroup('${g.key}')">
         <span class="group-header-text">${g.label} <span class="group-count">(${items.length})</span></span>
